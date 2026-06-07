@@ -1,0 +1,12 @@
+# Binários
+/bin/
+/dist/
+conversor
+*.exe
+
+# Cobertura
+*.out
+
+# IDEs
+.vscode/
+.idea/

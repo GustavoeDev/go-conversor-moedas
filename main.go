@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Cambio struct {
@@ -38,7 +39,7 @@ func parsearArgumentos() (string, string, error) {
 	if len(os.Args) < 3 {
 		return "", "", ErrArgumentosInsuficientes
 	}
-	return os.Args[1], os.Args[2], nil
+	return strings.ToUpper(os.Args[1]), strings.ToUpper(os.Args[2]), nil
 }
 
 func parsearValor(rawValor string) (float64, error) {
@@ -59,46 +60,16 @@ func buscarTaxa(cambio Cambio, moeda string) (float64, error) {
 }
 
 func main() {
-	dados := `{
-		"base": "BRL",
-		"date": "2025-04-14",
-		"rates": {
-			"USD": 0.151,
-			"EUR": 0.137,
-			"JPY": 16.29,
-			"GBP": 0.13,
-			"CHF": 0.1402,
-			"AUD": 0.2712,
-			"CAD": 0.2374,
-			"CNY": 1.251,
-			"HKD": 1.326,
-			"NZD": 0.2922,
-			"SEK": 1.655,
-			"NOK": 1.806,
-			"DKK": 1.122,
-			"SGD": 0.2249,
-			"KRW": 242.97,
-			"ZAR": 3.239,
-			"MXN": 3.454,
-			"INR": 14.71,
-			"ILS": 0.63,
-			"THB": 5.74,
-			"IDR": 2875.0,
-			"MYR": 0.754,
-			"PHP": 9.74,
-			"PLN": 0.644,
-			"CZK": 3.77,
-			"HUF": 61.59,
-			"TRY": 6.49,
-			"BGN": 0.293,
-			"RON": 0.746
-		}
+	dados, err := os.ReadFile("taxas.json")
+
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "erro ao ler arquivo: %v\n", err)
+		os.Exit(1)
 	}
-	`
 
 	cambio := Cambio{}
 
-	if err := json.Unmarshal([]byte(dados), &cambio); err != nil {
+	if err := json.Unmarshal(dados, &cambio); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "erro ao carregar taxas:", err)
 		os.Exit(1)
 	}
