@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -11,6 +12,50 @@ type Cambio struct {
 	Base  string             `json:"base"`
 	Date  string             `json:"date"`
 	Rates map[string]float64 `json:"rates"`
+}
+
+var ErrArgumentosInsuficientes = errors.New(
+	"uso: ./conversor <valor> <moeda>\nexemplo: ./conversor 100 USD",
+)
+
+type ErrValorInvalido struct {
+	Valor string
+}
+
+func (e *ErrValorInvalido) Error() string {
+	return fmt.Sprintf("'%s' não é um número válido", e.Valor)
+}
+
+type ErrMoedaNaoEncontrada struct {
+	Moeda string
+}
+
+func (e *ErrMoedaNaoEncontrada) Error() string {
+	return fmt.Sprintf("moeda '%s' não encontrada", e.Moeda)
+}
+
+func parsearArgumentos() (string, string, error) {
+	if len(os.Args) < 3 {
+		return "", "", ErrArgumentosInsuficientes
+	}
+	return os.Args[1], os.Args[2], nil
+}
+
+func parsearValor(rawValor string) (float64, error) {
+	valor, err := strconv.ParseFloat(rawValor, 64)
+
+	if err != nil {
+		return 0, &ErrValorInvalido{Valor: rawValor}
+	}
+	return valor, nil
+}
+
+func buscarTaxa(cambio Cambio, moeda string) (float64, error) {
+	taxa, ok := cambio.Rates[moeda]
+	if !ok {
+		return 0, &ErrMoedaNaoEncontrada{Moeda: moeda}
+	}
+	return taxa, nil
 }
 
 func main() {
@@ -53,25 +98,26 @@ func main() {
 
 	cambio := Cambio{}
 
-	err := json.Unmarshal([]byte(dados), &cambio)
-
-	if err != nil {
-		panic(err)
+	if err := json.Unmarshal([]byte(dados), &cambio); err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "erro ao carregar taxas:", err)
+		os.Exit(1)
 	}
 
-	rawValor := os.Args[1]
-	base := os.Args[2]
-
-	valor, err := strconv.ParseFloat(rawValor, 64)
-
+	rawValor, moeda, err := parsearArgumentos()
 	if err != nil {
-		panic(err)
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 
-	taxa, ok := cambio.Rates[base]
+	valor, err := parsearValor(rawValor)
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 
-	if !ok {
-		_, _ = fmt.Fprintf(os.Stderr, "erro: moeda %q não encontrada\n", base)
+	taxa, err := buscarTaxa(cambio, moeda)
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
